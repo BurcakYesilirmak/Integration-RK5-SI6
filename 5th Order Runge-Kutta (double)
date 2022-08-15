@@ -1,0 +1,182 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
+#include <time.h>
+int FCOUNT; 
+
+void energies(double r[3],double v[3], double *E, double *H)  {
+    // jupiter mass : 9.547919e-4 wrt Sun
+    double mu= 2.9619474286664206E-04;
+    double v2 = v[0]*v[0] + v[1]*v[1]+ v[2]*v[2];
+    double r2 = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+    double norm_r=sqrt(r2);
+    double ek = 0.5*v2;         // kinetic energy 
+    double epot = -mu/norm_r;    // potential energy
+          *E = ek + epot;       // mechanical energy
+
+    double i = r[1] * v[2] - r[2] * v[1] ;  // i = R1*V2-R2V1 
+    double j = r[2] * v[0] - r[0] * v[2] ;  // j = R2*V0-R0V2 
+    double k = r[0] * v[1] - r[1] * v[0] ;  // k = R0*V1-R1V0
+          *H = sqrt(i*i+j*j+k*k);           // angular momentum                              
+    } 
+
+void semimajor_eccentricity(double r[3], double v[3], double *a, double *e) {
+   double norm_r,norm_v, r1, v1, rv;
+   double x[3], y, z;
+   double var1, var2, var3;
+   int i;
+   
+   double GM= 2.9619474286664206E-04;
+   r1= r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
+   v1= v[0] * v[0] + v[1] * v[1] + v[2] * v[2]; 
+   rv= r[0] * v[0] + r[1] * v[1] + r[2] * v[2];
+   norm_r = sqrt(r1);
+   norm_v = sqrt(v1);
+  double vr= rv/norm_r;
+
+// first
+   var1=  v1/GM - 1.0/norm_r;
+   var2= rv/GM;
+   for(i=0; i<3; i++) {
+   x[i]  = r[i]*var1 - v[i]*var2; } 
+   var3= x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
+    *e = sqrt(var3);                           // eccentricity vector length
+    *a = 1/((2.0/norm_r) - v1/GM);             // semi-major axis length   
+// second
+ /*   double h0 = r[1] * v[2] - r[2] * v[1] ;  // i = R1*V2-R2V1 
+    double h1 = r[2] * v[0] - r[0] * v[2] ;  // j = R2*V0-R0V2 
+    double h2 = r[0] * v[1] - r[1] * v[0] ;  // k = R0*V1-R1V0
+
+    double i = v[1] * h2 - v[2] * h1 ;  // i = R1*V2-R2V1 
+    double j = v[2] * h0 - v[0] * h2 ;  // j = R2*V0-R0V2 
+    double k = v[0] * h1 - v[1] * h0 ;  // k = R0*V1-R1V0
+
+    double e0 = i/GM - r[0]/norm_r;
+    double e1 = j/GM - r[1]/norm_r;
+    double e2 = k/GM - r[2]/norm_r; 
+
+   *e = sqrt(e0*e0 + e1*e1+ e2*e2);      */ 
+   
+   // scalar approach for eccentricity
+/*  double e0= norm_r*vr*vr;
+  double e1 = (2.0*GM-norm_r*v1)*e0;
+  double e2 = (GM-norm_r*v1);
+  double e3 = e2*e2;
+  double e4 = sqrt(e1 + e3);
+  *e = e4/GM;  */           
+                                                       }    
+
+// equation of motion's right-hand side evaluation as function:
+void f(double r[3], double v[3], double *kr_i, double *kv_i)  {
+    double mu= 2.9619474286664206E-04;
+    double dot = r[0]*r[0]+ r[1]*r[1]+ r[2]*r[2];
+    double r3=dot*sqrt(dot); 
+
+        for(int i=0; i<3; i++)                {
+         kv_i[i] = -r[i]*mu/r3; 
+         kr_i[i] = v[i];                      }               
+              FCOUNT++;
+                                              }    
+
+ // 5th Order Runge Kutta Method :
+void RK5(double r[3], double v[3], double dt) {
+    double k_r1[3], k_v1[3], k_r2[3], k_v2[3], k_r5[3], k_v5[3];
+    double k_r3[3], k_v3[3], k_r4[3], k_v4[3], k_r6[3], k_v6[3];
+    double v_temp1[3], v_temp2[3], v_temp3[3], v_temp4[3], v_temp5[3];
+    double r_temp1[3], r_temp2[3], r_temp3[3], r_temp4[3], r_temp5[3];
+    double kr[3], kv[3];
+    double c[]= {(double)1/4, (double)1/8, (double)3/16, (double)9/16, 
+                 (double)3/7, (double)2/7, (double)12/7, (double)8/7};
+ /*  double c[] = {0.25, 0.125, 0.75, 0.1875, 0.5625, 0.4285714285714285476380780, 0.2857142857142856984253854,
+                                                      1.7142857142857141905523122, 1.1428571428571427937015414}; 
+    // RK5jupiter10003_dt0.01_double_a_e_energy  -> katsayılar rasyonel olmazsa hata çok büyüyor. */
+
+    f(r, v, k_r1, k_v1);
+        for(int i=0; i<3; i++)               {
+            v_temp1[i]= v[i] + k_v1[i]*c[0]*dt;
+            r_temp1[i]= r[i] + k_r1[i]*c[0]*dt; 
+                                             }
+
+    f(r_temp1, v_temp1, k_r2, k_v2);
+        for(int i=0; i<3; i++)               {
+            v_temp2[i]= v[i] + k_v2[i]*c[1]*dt + k_v1[i]*c[1]*dt;
+            r_temp2[i]= r[i] + k_r2[i]*c[1]*dt + k_r1[i]*c[1]*dt;
+                                             }
+
+    f(r_temp2, v_temp2, k_r3, k_v3);
+        for(int i=0; i<3; i++)               {
+            v_temp3[i]= v[i] - k_v2[i]*dt*0.5 + k_v3[i]*dt;
+            r_temp3[i]= r[i] - k_r2[i]*dt*0.5 + k_r3[i]*dt;    
+                                             }
+
+    f(r_temp3, v_temp3, k_r4, k_v4);
+        for(int i=0; i<3; i++)               {
+            v_temp4[i]= v[i] + k_v1[i]*c[2]*dt + k_v4[i]*dt*c[3];
+            r_temp4[i]= r[i] + k_r1[i]*c[2]*dt + k_r4[i]*dt*c[3];    
+                                             }
+
+    f(r_temp4, v_temp4,  k_r5, k_v5);
+        for(int i=0; i<3; i++)               {
+            v_temp5[i]= v[i] - k_v1[i]*c[4]*dt + k_v2[i]*dt*c[5] + k_v3[i]*dt*c[6] - k_v4[i]*dt*c[6] + k_v5[i]*dt*c[7];
+            r_temp5[i]= r[i] - k_r1[i]*c[4]*dt + k_r2[i]*dt*c[5] + k_r3[i]*dt*c[6] - k_r4[i]*dt*c[6] + k_r5[i]*dt*c[7];    
+                                             }      
+
+    f(r_temp5, v_temp5, k_r6, k_v6);
+        for(int i=0; i<3; i++)               {
+           kv[i] = (7*(k_v1[i]+k_v6[i]) + 32*(k_v3[i]+k_v5[i]) + 12*k_v4[i])/90.0;
+           kr[i] = (7*(k_r1[i]+k_r6[i]) + 32*(k_r3[i]+k_r5[i]) + 12*k_r4[i])/90.0;
+           v[i] += kv[i]*dt;
+           r[i] += kr[i]*dt;            }
+    }
+
+int main() {
+    double t, dt, T, a, e, energy, angmomentum; 
+    //  r[3]={X,Y,Z}  V[3]={Vx,Vy,Vz} ;  
+    // DATA: NASA HORIZON https://ssd.jpl.nasa.gov/horizons/app.html#/
+    // JUPITER INITIAL VECTORS 2018-Jun-28 
+    double r[]= {-3.460167504309613E+00, -4.149454064629457E+00, 9.465721330038770E-02};
+    double v[]= {5.709741990408655E-03, -4.481465873394258E-03, -1.091471606521913E-04};
+
+    // time parameters setting:
+    T=  2*M_PI*1000;                                 // if set under 700, orbit is not close (revolution app. 4400 Earth days)
+    dt= 1e-2;
+    
+    // error measure with long double 
+    long double  A=  5.20273584355200957629L;       // semi-major axis lenght
+    long double EC=  4.88056797545033895064e-02L;   // eccentricity 
+    long double  E= -2.84652874731022392836e-05L;   // mechanical energy of system
+    long double  H=  3.92090843714996407606e-02L;   // angular momentum of system
+        // to store the execution time of code
+      double time_spent = 0.0;
+ 
+      clock_t begin = clock();
+   semimajor_eccentricity(r, v, &a, &e);
+   energies(r, v, &energy, &angmomentum);
+   // printf("%.20lf %.20lf %.20lf %.20lf\n", a , e, energy, angmomentum);
+   // exit(1);
+            
+    FILE *kk, *pp;
+    // kk=fopen("RK5_double_pos_vel.txt","w");
+     pp=fopen("RK5_double_a_e_energy.txt","w");
+    t=0.0 ;   
+    int Count=0.0;
+    while ( t <= T )  {          // ( t <= tmax/dt )
+       RK5(r, v, dt);     
+       semimajor_eccentricity(r, v, &a, &e); 
+       energies(r, v, &energy, &angmomentum);   
+    // fprintf(kk,"%d %.20lf %.20lf %.20lf\n", Count, r[0], r[1], r[2]);
+       fprintf(pp,"%lf %d %.15Le %.15Le %.15Le %.15Le\n", t, FCOUNT, (A-a)/A, (EC-e)/EC, (E-energy)/E, (H-angmomentum)/H);
+      // fprintf(pp,"%lf %d %.15le %.15le %.15le %.15le\n", t, FCOUNT, a, e, energy, angmomentum);
+       t +=dt;       
+       Count++; }
+    clock_t end = clock();
+   // fclose(kk);
+    fclose(pp);
+    // calculate elapsed time by finding difference (end - begin) and
+    // dividing the difference by CLOCKS_PER_SEC to convert to seconds
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+ 
+    printf("The elapsed time is %f seconds", time_spent);
+    return 0;  }
+    
+// The elapsed time is 2.542719 seconds
