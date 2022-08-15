@@ -1,0 +1,149 @@
+#include<stdio.h>
+#include<math.h>
+#include <time.h>
+int FCOUNT; 
+
+void energies(double r[3],double v[3], double *E, double *H)  {
+    double mu= 2.9619474286664206E-04;
+    double v2 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+    double r2 = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+    double norm_r=sqrt(r2);
+    double ek = 0.5*v2;         // kinetic energy 
+    double epot = -mu/norm_r;    // potential energy
+          *E = ek + epot;       // mechanical energy
+
+    double i = r[1] * v[2] - r[2] * v[1] ;  // i = R1*V2-R2V1 
+    double j = r[2] * v[0] - r[0] * v[2] ;  // j = R2*V0-R0V2 
+    double k = r[0] * v[1] - r[1] * v[0] ;  // k = R0*V1-R1V0
+          *H = sqrt(i*i+j*j+k*k);           // angular momentum                              
+    } 
+
+void semimajor_eccentricity(double r[3], double v[3], double *a, double *e) {
+   double norm_r,norm_v, r1, v1, rv;
+   double x, y, z;
+   double var1, var2, var3;
+   
+   double GM= 2.9619474286664206E-04;
+   r1= r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
+   v1= v[0] * v[0] + v[1] * v[1] + v[2] * v[2]; 
+   rv= r[0] * v[0] + r[1] * v[1] + r[2] * v[2];
+
+   norm_r = sqrt(r1);
+   norm_v = sqrt(v1);
+   var1=  v1/GM - 1.0/norm_r;
+   var2= rv/GM;
+   x  = r[0]*var1 - v[0]*var2; 
+   y  = r[1]*var1 - v[1]*var2;
+   z  = r[2]*var1 - v[2]*var2;
+   var3= x*x + y*y+ z*z;
+
+   *e = sqrt(var3);                           // eccentricity vector length
+   *a = 1/((2.0/norm_r) - v1/GM);             // semi-major axis length   
+   }    
+
+   void accelaration(double r[3], double *a){
+    double  mu = 2.9619474286664206E-04;
+    double dot = r[0]*r[0] + r[1]*r[1] + r[2]*r[2];
+    double r2 = sqrt(dot);
+    double r3 = dot*r2;
+
+    for(int i=0;i<3;i++)
+    a[i] = -mu*r[i]/r3;
+    }   
+                                          
+                                                           
+   void sym6thorder_fukushima(double r[3], double v[3], double dt) {
+    double v_temp1[3], r_temp1[3], v_temp2[3], r_temp2[3];
+    double v_temp3[3], r_temp3[3], v_temp4[3], r_temp4[3];
+    double v_temp5[3], r_temp5[3], v_temp6[3], r_temp6[3];
+    double v_temp7[3], r_temp7[3],    a6[3], a7[3], a8[3];
+    double  r_temp[3], a1[3], a2[3],  a3[3], a4[3], a5[3];
+    double b1, b2, b3, b4, d1, d2, d3, d4; 
+     b1 =  0.784513610477560 ;   // 3.608171852e-17
+     b2 =  0.235573213359357;    // 7.86407102e-18
+     b3 = -1.177679984178870;    // 9.843241231e-17
+     b4 =  1.315186320683906;    // -6.271179877e-17
+     d1 =  0.3922568052387800;   //  1.804085925e-17
+     d2 =  0.5100434119184585;   //  2.197289477e-17
+     d3 = -0.4710533854097565;   // -2.36290957e-18
+     d4 =  0.0687531682525180;   // 3.98251896e-18
+    
+    int i;
+    for(i=0; i<3; i++)                            {   
+    r_temp[i] = r[i] + dt*d1*v[i];                }
+
+    accelaration(r_temp, a1);            
+    for(i=0; i<3; i++)                            {                  
+    v_temp1[i] = v[i] + dt*b1*a1[i];               
+    r_temp1[i] = r_temp[i] + dt*d2*v_temp1[i];    }
+
+    accelaration(r_temp1, a2);         
+    for(i=0; i<3; i++)                            {         
+    v_temp2[i] = v_temp1[i] + dt*b2*a2[i];        
+    r_temp2[i] = r_temp1[i] + dt*d3*v_temp2[i];   }
+    
+    accelaration(r_temp2, a3);  
+    for(i=0; i<3; i++)                            {                  
+    v_temp3[i] = v_temp2[i] + dt*b3*a3[i];
+    r_temp3[i] = r_temp2[i] + dt*d4*v_temp3[i];   }       
+
+    accelaration(r_temp3, a4);  
+    for(i=0; i<3; i++)                            {                  
+    v_temp4[i] = v_temp3[i] + dt*b4*a4[i];
+    r_temp4[i] = r_temp3[i] + dt*d4*v_temp4[i];   }      
+
+    accelaration(r_temp4, a5);  
+    for(i=0; i<3; i++)                            {                  
+    v_temp5[i] = v_temp4[i] + dt*b3*a5[i];
+    r_temp5[i] = r_temp4[i] + dt*d3*v_temp5[i];   }       
+
+    accelaration(r_temp5, a6);  
+    for(i=0; i<3; i++)                            {                  
+    v_temp6[i] = v_temp5[i] + dt*b2*a6[i];
+    r_temp6[i] = r_temp5[i] + dt*d2*v_temp6[i];   }     
+
+    accelaration(r_temp6, a7);  
+    for(i=0; i<3; i++)                            {                  
+    v[i] = v_temp6[i] + dt*b1*a7[i];
+    r[i] = r_temp6[i] + dt*d1*v[i];               }     }                                                         
+
+int main() {
+    double t, dt, tend, a2, e, energy, angmomentum, rdot, a[3] ;     
+    double r[]= {-3.460167504309613E+00, -4.149454064629457E+00,  9.465721330038770E-02};
+    double v[]= { 5.709741990408655E-03, -4.481465873394258E-03, -1.091471606521913E-04};
+
+    
+    long double  A=  5.20273584355200957629L;       // semi-major axis lenght
+    long double EC=  4.88056797545033895064e-02L;   // eccentricity 
+    long double  E= -2.84652874731022392836e-05L;   // mechanical energy of system
+    long double  H=  3.92090843714996407606e-02L;   // angular momentum of system
+        
+    int i;
+    double time_spent = 0.0;
+    clock_t begin = clock();
+        t=0.0 ;   
+        tend= 2*M_PI*1000; ;  
+        dt= 1e-2;  
+        int Count=0.0;
+
+        FILE *kk, *pp;
+    //    pp=fopen("fukushimatest6th_pos.txt","w");
+        kk=fopen("sym_6th_double_energy.txt","w");
+       
+        while ( t <= tend )  {          // ( t <= tmax/dt )
+        //sym_fukushima(r, v, dt);
+        sym6thorder_fukushima(r, v, dt);
+        semimajor_eccentricity(r, v, &a2, &e); 
+        energies(r, v, &energy, &angmomentum);  
+    //    fprintf(pp,"%lf %.20le  %.20le  %.20le \n ", t, r[0], r[1], r[2]);
+        fprintf(kk,"%lf %d %.15Le %.15Le %.15Le %.15Le\n", t, FCOUNT, (A-a2)/A, (EC-e)/EC, (E-energy)/E, (H-angmomentum)/H);
+        t +=dt;
+        Count++;              }
+        clock_t end = clock();
+    fclose(kk);
+    fclose(pp);
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+ 
+    printf("The elapsed time is %f seconds", time_spent);
+    return 0; 
+    }
