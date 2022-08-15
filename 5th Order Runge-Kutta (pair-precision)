@@ -1,0 +1,510 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
+#include <time.h>
+#define C  134217729 
+int FCOUNT; 
+
+  typedef struct {
+   double  xh[3], xl[3];
+   double  x_h[3], x_l[3];
+   double h,l;
+  } value;
+
+
+  // Functions of Accurate Arithmetic Operations:
+ void VeltkampSplit(double x, double *xh, double *xl)   {        
+    double p = C * x;
+    double q = x - p;
+    *xh = p + q; 
+    *xl = x - *xh;                                      }
+
+
+ void F2Sum(double a, double b,double *xh, double *xl)  {
+    double z;
+    *xh= a+b;
+    z = *xh-a;
+    *xl= b-z;                                           }
+
+
+ void TwoSum(double a, double b,double *xh, double *xl) {
+    double a1 ,b1 ,del_a ,del_b;
+    *xh= a+b;
+    a1= *xh-b;
+    b1= *xh-a1;
+    del_a = a-a1;
+    del_b = b-b1;
+    *xl = del_a+del_b;                                   }
+
+  //fukushima
+/*  void Summation2(double xh1, double xl1, double xh2, double xl2,double *xh3, double *xl3 ){  
+ double v1, v2, w1, w2;
+   w1 = xh1 + xh2;
+  if ( fabs (xh1)> fabs (xh2)) {
+     w2 = xh1-w1;
+     w2 += xh2;
+     w2 += xl2;
+     w2 += xl1;                 }
+  else             {
+    w2 = xh2-w1;
+     w2 += xh1;
+     w2 += xl1;
+     w2 += xl2;    }
+    v1 = w1+w2;
+    *xh3 = v1;
+    *xl3 = (w1-v1)+w2;    }  
+  
+   // Fukushima
+  void Division(double xh1, double xl1, double xh2, double xl2, double *xh3, double *xl3){
+  double p, q, t, t2, v1, v2, k; 
+  double hw, tw, hy, ty; 
+  t = xh1/xh2;
+    VeltkampSplit( t,  &hw, &tw); 
+    VeltkampSplit(xh2, &hy, &ty); 
+  p = hw*hy;
+  q = hw*ty + tw*hy;
+  v1 = p+q;
+  v2 = ((p-v1)+q)+tw*ty;
+  t2=((((xh1-v1)-v2)+xl1)-t*xl2)/xh2;
+  k = t+t2;
+  *xh3 = k;
+  *xl3 = (t- *xh3)+t2; 
+  return;
+  }     
+
+
+     // fukushima
+    void Mult(double xh1, double xl1, double xh2, double xl2,double *xh3, double *xl3) {
+    double p, q, w1, w2, z, k;
+    double xh_1, xl_1, xh_2, xl_2;
+    VeltkampSplit(xh1, &xh_1, &xl_1); 
+    VeltkampSplit(xh2, &xh_2, &xl_2); 
+    z= xl1*xh2 + xh1*xl2;
+    p=xh_1*xh_2;
+    q=xh_1*xl_2+xl_1*xh_2;
+     w1  =  p+q ;
+     w2  =  p - w1;
+     w2 +=  q;
+     w2 +=  xl_1*xl_2 + z;
+     k = w1+w2;
+     *xh3 = k;
+     *xl3 = (w1-k)+w2;
+    return;
+    }            
+
+     // the square of the vector's itself
+  void square_product(double xh[3], double xl[3],double *xh3, double *xl3) {        
+      double u0, u1, v0, v1, t0, t1 ,t2, t3;
+      Mult(xh[0], xl[0], xh[0], xl[0], &u0, &u1); // xh^2 & xl^2
+      Mult(xh[1], xl[1], xh[1], xl[1], &v0, &v1); // yh^2 & yl^2
+      Mult(xh[2], xl[2], xh[2], xl[2], &t0, &t1); // zh^2 & zl^2
+      Summation2(u0, u1, v0, v1, &t2, &t3);
+      Summation2(t0, t1, t2, t3, xh3, xl3);                               }       
+    
+      // fukushima
+  void SquareRoot(double R_h[3], double R_l[3], double *xh3, double *xl3)  {              //as pairs
+  double w1, w2, p, q, v1, v2, x1, x2, hw, tw; 
+     square_product(R_h, R_l, &x1, &x2);
+     w1 = sqrt(x1);                          //starting point to the square root 
+     VeltkampSplit(w1, &hw, &tw); 
+     p = hw*hw;
+     q = hw*tw*2.0;
+     v1 = q+p;
+     v2 = ((p-v1)+q)+tw*tw;
+     w2 = (((x1-v1)-v2)+x2)/(2.0*w1);
+     *xh3 = w1+w2;
+     *xl3= (w1-*xh3)+w2;                                                            }  */
+
+  //Pichat and Neumaier’s summation algorithm
+   void Summation2(double xh1, double xl1, double xh2, double xl2,double *xh3, double *xl3 ){  
+    double t,s,u,v,z;
+    TwoSum(xh1, xh2, &t, &s);
+    TwoSum(xl1, xl2, &u, &v);
+    z= v+s+u; 
+    *xh3=t;
+    *xl3=z;                                                                               }   
+
+  // Dekker's & Polynomial Multiplication
+ void Mult(double xh1, double xl1, double xh2, double xl2,double *t, double *z) {
+    double xh_1, xl_1, xh_2, xl_2, xh3, xl3;
+    VeltkampSplit(xh1, &xh_1, &xl_1); 
+    VeltkampSplit(xh2, &xh_2, &xl_2); 
+    xh3 =  xh1*xh2;
+    xl3 =  xh_1*xh_2 - xh3;
+    xl3 +=  xh_1*xl_2;
+    xl3 +=  xl_1*xh_2;
+    xl3 +=  xl_1*xl_2+ xl1*xh2 + xh1*xl2+ xl1*xl2;
+    *t = xh3;
+    *z = xl3;
+    return;                                                                     }
+
+   void Division(double xh1, double xl1, double xh2, double xl2,double *xh3, double *xl3){
+    double u1, u0, t, z;
+    t =xh1/xh2;
+    Mult(t, 0, xh2, 0, &u0, &u1); 
+    z = xh1- u0;
+    z -= u1;
+    z += xl1;
+    z -= t * xl2;
+    z /= xh2;  
+    *xh3= t;
+    *xl3= z;
+   // F2Sum(t, z, xh3, xl3);
+    return; } 
+
+ // the square of the vector's itself
+  void square_product(double xh[3], double xl[3],double *xh3, double *xl3) {        
+      double u0, u1, v0, v1, t0, t1 ,t2, t3;
+      Mult(xh[0], xl[0], xh[0], xl[0], &u0, &u1); // xh^2 & xl^2
+      Mult(xh[1], xl[1], xh[1], xl[1], &v0, &v1); // yh^2 & yl^2
+      Mult(xh[2], xl[2], xh[2], xl[2], &t0, &t1); // zh^2 & zl^2
+      Summation2(u0, u1, v0, v1, &t2, &t3);
+      Summation2(t0, t1, t2, t3, xh3, xl3);                               }
+
+  void SquareRoot(double R_h[3], double R_l[3], double *xh3, double *xl3)  {              //as pairs
+      double y0, y1;
+      double p0, p1, t4, t5;
+
+     square_product(R_h, R_l, &t4, &t5);
+     y0 = sqrt(t4);                          //starting point to the square root 
+     Mult(y0, 0, y0, 0, &p0, &p1); 
+     y1 = t4 - p0;
+     y1 -= p1;
+     y1 += t5 ;
+     if(y0<0) { 
+     printf("error \n"); }
+     y1 = (y1 / y0)*0.5;                   // y0 and y1 are pairs of the square root operation
+     *xh3= y0;                             // Mult(y0, y1, t4, t5, xh3, xl3);    // k^2*sqrt(k)    
+     *xl3= y1;                                                            }  
+
+   void scalar_product(double xh[3], double xl[3],double yh[3], double yl[3], double *xh3, double *xl3) { 
+      double u0, u1, v0, v1, t0, t1 ,t2, t3;
+      Mult(xh[0], xl[0], yh[0], yl[0], &u0, &u1); // X^2
+      Mult(xh[1], xl[1], yh[1], yl[1], &v0, &v1); // Y^2
+      Mult(xh[2], xl[2], yh[2], yl[2], &t0, &t1); // Z^2
+      Summation2(u0, u1, v0, v1, &t2, &t3);
+      Summation2(t0, t1, t2, t3, xh3, xl3);                                                             }
+
+   void semimajor_eccentricity(double rh[3], double rl[3], double vh[3], double vl[3], double *a, double *e) {
+
+   double sc_h, sc_l, sc_h2, sc_l2, norm_rh, norm_rl, norm_vh, norm_vl;
+   double div1, div2, div3, div4, div5, div6;
+   double mult_h1, mult_l1, mult_h2, mult_l2, mult_h3, mult_l3;
+   double mult_h4, mult_l4, mult_h5, mult_l5, mult_h6, mult_l6;
+   double sum1, sum2, sum3, sum4, sum5, sum6, sum7, sum8;
+   double div_h, div_l, div_h1, div_l1, sum_h2, sum_l2;
+   double mu_h=2.9619474286664206E-04, mu_l=-0.0000000000000000497815544e-4; // Gravitational Parameters
+   
+   //Mult(k_h, k_l, k_h, k_l, &kh, &kl); 
+   scalar_product(vh, vl, vh, vl, &sc_h, &sc_l);        // v.v = v1
+   scalar_product(rh, rl, vh, vl, &sc_h2, &sc_l2);      // r.v = d1
+   SquareRoot(rh, rl, &norm_rh, &norm_rl);              // norm_r
+   SquareRoot(vh, vl, &norm_vh, &norm_vl);              // norm_v
+
+   Division(sc_h, sc_l, mu_h, mu_l, &div3, &div4);      //  v1/k^2 
+   Division(1.0, 0, norm_rh, norm_rl, &div1, &div2);    //  1/norm_r
+
+   Summation2(div3, div4, -div1, -div2, &sum1, &sum2);  //  var1= (v1/k^2)-1/norm_r
+   Division(sc_h2, sc_l2, mu_h, mu_l, &div5, &div6);    //  var2=  d1/k^2      
+
+   Mult(rh[0], rl[0], sum1, sum2, &mult_h1, &mult_l1);  //  r_vec[]*var1
+   Mult(rh[1], rl[1], sum1, sum2, &mult_h2, &mult_l2);
+   Mult(rh[2], rl[2], sum1, sum2, &mult_h3, &mult_l3);
+
+   Mult(vh[0], vl[0], div5, div6, &mult_h4, &mult_l4);  //  v_vec[]*var2
+   Mult(vh[1], vl[1], div5, div6, &mult_h5, &mult_l5);
+   Mult(vh[2], vl[2], div5, div6, &mult_h6, &mult_l6);
+
+   Summation2(mult_h1, mult_l1, -mult_h4, -mult_l4, &sum3, &sum4); // x
+   Summation2(mult_h2, mult_l2, -mult_h5, -mult_l5, &sum5, &sum6); // y
+   Summation2(mult_h3, mult_l3, -mult_h6, -mult_l6, &sum7, &sum8); // z 
+   double sum_h[]= {sum3, sum5, sum7}, sq_h;
+   double sum_l[]= {sum4, sum6, sum8}, sq_l;
+   SquareRoot(sum_h, sum_l, &sq_h, &sq_l);              // ecc_h, ecc_l => sqrt(x^2+y^2+z^2)
+
+    // semi-major axis = 1 / ((2.0/norm_r) - v1/k2);
+    Division(2.0, 0.0, norm_rh, norm_rl, &div_h, &div_l); 
+    Summation2(div_h, div_l, -div3, -div4, &sum_h2, &sum_l2); 
+    Division(1.0, 0.0, sum_h2, sum_l2, &div_h1, &div_l1); 
+    a[0]= div_h1;
+    a[1]= div_l1;
+    e[0]= sq_h;
+    e[1]= sq_l;
+   }
+   
+   void energies(double rh[3], double rl[3], double vh[3], double vl[3], double *energy, double *angmomentum){
+      double norm_rh, norm_rl, sc_h, sc_l;
+      double ek_h, ek_l, pot_h, pot_l, mech_h, mech_l;
+      double mulh, mull, mulh1, mull1, mulh2, mull2;
+      double mulh3, mull3, mulh4, mull4, mulh5, mull5; 
+      double sumh, suml, sumh1, suml1, sumh2, suml2;
+      double mu_h=2.9619474286664206E-04, mu_l=-0.0000000000000000497815544e-4; // Gravitational Parameters
+      
+      // kinetic and potential energies:
+      scalar_product(vh, vl, vh, vl, &sc_h, &sc_l); // v.v
+      SquareRoot(rh, rl, &norm_rh, &norm_rl); //norm_r
+      Mult(sc_h, sc_l, 0.5, 0.0, &ek_h, &ek_l);
+      Division(mu_h, mu_l, norm_rh, norm_rl, &pot_h, &pot_l);
+      Summation2( ek_h, ek_l, -pot_h, -pot_l, &mech_h, &mech_l);
+      
+      // angular momentum: 
+                         // i = R1*V2-R2V1 
+      Mult(rh[1], rl[1], vh[2], vl[2], &mulh, &mull);
+      Mult(rh[2], rl[2], vh[1], vl[1], &mulh1, &mull1);
+      Summation2(mulh, mull, -mulh1, -mull1, &sumh, &suml);
+
+                         // j = R2*V0-R0V2 
+      Mult(rh[2], rl[2], vh[0], vl[0], &mulh2, &mull2);
+      Mult(rh[0], rl[0], vh[2], vl[2], &mulh3, &mull3);
+      Summation2(mulh2, mull2, -mulh3, -mull3, &sumh1, &suml1);
+
+                          // k = R0*V1-R1V0 
+      Mult(rh[0], rl[0], vh[1], vl[1],  &mulh4, &mull4);
+      Mult(rh[1], rl[1], vh[0], vl[0],  &mulh5, &mull5);
+      Summation2(mulh4, mull4, -mulh5, -mull5, &sumh2, &suml2);
+   
+       // ang_h, ang_l => sqrt(i^2 + j^2 + k^2) :
+      double sumh3[]= {sumh, sumh1, sumh2}, sq_h;
+      double suml3[]= {suml, suml1, suml2}, sq_l;
+          SquareRoot(sumh3, suml3, &sq_h, &sq_l); 
+     
+      //results:
+      energy[0]= mech_h;
+      energy[1]= mech_l;
+      angmomentum[0]= sq_h;
+      angmomentum[1]=sq_l;
+    } 
+
+
+   void f(double r[3], double rl[3], double v[3], double vl[3], double dt,   double dtl, 
+                                     double *krh, double *krl,  double *kvh, double *kvl)  {
+      double sch1, scl1, sc_h1, sc_l1, sc_h2, sc_l2, sc_h3, sc_l3, x, y;
+      double mu_h=2.9619474286664206E-04, mu_l=-0.0000000000000000497815544e-4; // gravitational parameters
+      
+      //  [ -mu/(x^2+y^2+z^2)^3/2 ]* R 
+      square_product(r, rl, &sc_h1, &sc_l1);             // k = y[0]*y[0]+y[1]*y[1]+y[2]*y[2] 
+      SquareRoot(r, rl, &sc_h2, &sc_l2);                 // sqrt(k) 
+      Mult(sc_h1, sc_l1, sc_h2, sc_l2, &sc_h3, &sc_l3);  // k*sqrt(k)
+      Division(mu_h, mu_l, sc_h3, sc_l3, &sch1, &scl1); 
+      Mult(sch1, scl1, -1.0, 0.0, &x, &y);
+    
+    for(int i=0; i<3; i++)   {
+        Mult(x, y, r[i], rl[i], &kvh[i], &kvl[i]); 
+         krh[i]=  v[i];  
+         krl[i]= vl[i];   }  
+          FCOUNT++;       }
+
+   void RK5(double r[3], double rl[3], double v[3], double vl[3], double dth, double dtl) { 
+       double kvh1[3], kvh2[3], kvh3[3], kvh4[3], kvh5[3], kvh6[3];
+       double kvl1[3], kvl2[3], kvl3[3], kvl4[3], kvl5[3], kvl6[3];
+       double krh1[3], krh2[3], krh3[3], krh4[3], krh5[3], krh6[3];
+       double krl1[3], krl2[3], krl3[3], krl4[3], krl5[3], krl6[3];
+       value inp[85];
+       int i;
+      
+      // coefficients
+      Division( 1.0, 0.0, 4.0,  0.0, &inp[0].h, &inp[0].l);
+      Division( 1.0, 0.0, 8.0,  0.0, &inp[1].h, &inp[1].l);
+      Division( 3.0, 0.0, 16.0, 0.0, &inp[2].h, &inp[2].l);
+      Division( 9.0, 0.0, 16.0, 0.0, &inp[3].h, &inp[3].l);
+      Division( 3.0, 0.0, 7.0,  0.0, &inp[4].h, &inp[4].l);
+      Division( 2.0, 0.0, 7.0,  0.0, &inp[5].h, &inp[5].l);
+      Division(12.0, 0.0, 7.0,  0.0, &inp[6].h, &inp[6].l);
+      Division( 8.0, 0.0, 7.0,  0.0, &inp[7].h, &inp[7].l);
+     // printf( "%.20lf \n", inp[7].l);
+     // exit(1);
+
+
+        // FIRST SLOPE
+        f(r, rl, v, vl, dth, dtl, krh1, krl1, kvh1, kvl1); 
+     // v_temp1[i]= v[i] + k_v1[i]*c[0]*dt;                                                                                         
+        for(int i=0; i<3; i++)                                                                    {
+        Mult(inp[0].h, inp[0].l, dth, dtl, &inp[8].h, &inp[8].l);    
+        Mult(kvh1[i], kvl1[i], inp[8].h, inp[8].l,  &inp[9].xh[i], &inp[9].xl[i]);
+        Summation2(v[i], vl[i], inp[9].xh[i], inp[9].xl[i], &inp[10].xh[i], &inp[10].xl[i]);   
+      
+        // r_temp1[i]= r[i] + k_r1[i]*c[0]*dt; 
+        Mult(krh1[i], krl1[i],  inp[8].h,  inp[8].l,  &inp[11].xh[i], &inp[11].xl[i]);
+        Summation2(r[i], rl[i], inp[11].xh[i], inp[11].xl[i], &inp[12].xh[i], &inp[12].xl[i]);     }
+
+
+        // SECOND SLOPE
+        f(inp[12].xh, inp[12].xl, inp[10].xh, inp[10].xl, dth, dtl, krh2, krl2, kvh2, kvl2);  
+    //  v_temp2[i]= v[i] + k_v2[i]*c[1]*dt + k_v1[i]*c[1]*dt;                                                                                            
+        for(int i=0; i<3; i++)                                                                 {
+        Mult(inp[1].h, inp[1].l, dth, dtl, &inp[13].h, &inp[13].l);    
+        Mult(kvh2[i], kvl2[i], inp[13].h, inp[13].l,  &inp[14].xh[i], &inp[14].xl[i]);
+        Mult(kvh1[i], kvl1[i], inp[13].h, inp[13].l,  &inp[15].xh[i], &inp[15].xl[i]);        
+        Summation2(inp[14].xh[i], inp[14].xl[i], inp[15].xh[i], inp[15].xl[i], &inp[16].xh[i], &inp[16].xl[i]);   
+        Summation2(v[i], vl[i], inp[16].xh[i], inp[16].xl[i], &inp[17].xh[i], &inp[17].xl[i]);   
+
+        // r_temp2[i]= r[i] + k_r2[i]*c[1]*dt + k_r1[i]*c[1]*dt;
+        Mult(krh1[i], krl1[i], inp[13].h, inp[13].l,  &inp[18].xh[i], &inp[18].xl[i]);
+        Mult(krh2[i], krl2[i], inp[13].h, inp[13].l,  &inp[19].xh[i], &inp[19].xl[i]);
+        Summation2(inp[18].xh[i], inp[18].xl[i], inp[19].xh[i], inp[19].xl[i], &inp[20].xh[i], &inp[20].xl[i]);           
+        Summation2(r[i], rl[i], inp[20].xh[i], inp[20].xl[i], &inp[21].xh[i], &inp[21].xl[i]);   }
+
+        
+        //  THIRD SLOPE 
+        f(inp[21].xh, inp[21].xl, inp[17].xh, inp[17].xl, dth, dtl, krh3, krl3, kvh3, kvl3);  
+    //  v_temp3[i]= v[i] - k_v2[i]*dt*0.5 + k_v3[i]*dt;                                                                                        
+        for(int i=0; i<3; i++)                                                                   {
+        Mult(kvh3[i], kvl3[i],  dth, dtl, &inp[22].xh[i], &inp[22].xl[i]);    
+        Mult(0.5, 0.0,  dth, dtl, &inp[23].h, &inp[23].l);    
+        Mult(kvh2[i], kvl2[i], inp[23].h, inp[23].l, &inp[24].xh[i], &inp[24].xl[i]);  
+        Summation2(inp[22].xh[i], inp[22].xl[i], -inp[24].xh[i], -inp[24].xl[i], &inp[25].xh[i], &inp[25].xl[i]);   
+        Summation2(v[i], vl[i], inp[25].xh[i], inp[25].xl[i], &inp[26].xh[i], &inp[26].xl[i]);   
+
+        // r_temp3[i]= r[i] - k_r2[i]*dt*0.5 + k_r3[i]*dt;    
+        Mult(krh3[i], krl3[i], dth, dtl, &inp[27].xh[i], &inp[27].xl[i]); 
+        Mult(krh2[i], krl2[i], inp[23].h, inp[23].l,  &inp[28].xh[i], &inp[28].xl[i]);
+        Summation2(inp[27].xh[i], inp[27].xl[i], -inp[28].xh[i], -inp[28].xl[i], &inp[29].xh[i], &inp[29].xl[i]);           
+        Summation2(r[i], rl[i], inp[29].xh[i], inp[29].xl[i], &inp[30].xh[i], &inp[30].xl[i]);   }
+
+
+        // 4TH SLOPE
+        f(inp[30].xh, inp[30].xl, inp[26].xh, inp[26].xl, dth, dtl, krh4, krl4, kvh4, kvl4);     
+        //v_temp4[i]= v[i] + k_v1[i]*c[2]*dt + k_v4[i]*dt*c[3];                                                                                     
+        for(int i=0; i<3; i++)                                                                  {
+        Mult(inp[2].h, inp[2].l, dth, dtl, &inp[31].h, &inp[31].l);     
+        Mult(inp[3].h, inp[3].l, dth, dtl, &inp[32].h, &inp[32].l); 
+        Mult(kvh1[i], kvl1[i], inp[31].h, inp[31].l, &inp[33].xh[i], &inp[33].xl[i]);  
+        Mult(kvh4[i], kvl4[i], inp[32].h, inp[32].l, &inp[34].xh[i], &inp[34].xl[i]);
+        Summation2(inp[33].xh[i], inp[33].xl[i], inp[34].xh[i], inp[34].xl[i], &inp[35].xh[i], &inp[35].xl[i]);   
+        Summation2(v[i], vl[i], inp[35].xh[i], inp[35].xl[i], &inp[36].xh[i],  &inp[36].xl[i]);   
+
+        // r_temp4[i]= r[i] + k_r1[i]*c[2]*dt + k_r4[i]*dt*c[3];    
+        Mult(krh1[i], krl1[i], inp[31].h, inp[31].l,  &inp[37].xh[i],  &inp[37].xl[i]);
+        Mult(krh4[i], krl4[i], inp[32].h, inp[32].l,  &inp[38].xh[i],  &inp[38].xl[i]);
+        Summation2(inp[37].xh[i], inp[37].xl[i], inp[38].xh[i], inp[38].xl[i], &inp[39].xh[i], &inp[39].xl[i]);           
+        Summation2(r[i], rl[i], inp[39].xh[i], inp[39].xl[i],  &inp[40].xh[i], &inp[40].xl[i]); }
+
+        // 5TH SLOPE
+        f(inp[40].xh, inp[40].xl, inp[36].xh, inp[36].xl, dth, dtl, krh5, krl5, kvh5, kvl5);  
+    //  v_temp5[i]= v[i] - k_v1[i]*c[4]*dt + k_v2[i]*dt*c[5] 
+    //                   + k_v3[i]*dt*c[6] - k_v4[i]*dt*c[6] + k_v5[i]*dt*c[7]
+        for(int i=0; i<3; i++)                                                                              {
+        Mult(inp[4].h, inp[4].l, dth, dtl, &inp[41].h, &inp[41].l);     
+        Mult(inp[5].h, inp[5].l, dth, dtl, &inp[42].h, &inp[42].l); 
+        Mult(inp[6].h, inp[6].l, dth, dtl, &inp[43].h, &inp[43].l);     
+        Mult(inp[7].h, inp[7].l, dth, dtl, &inp[44].h, &inp[44].l);  
+        Mult(kvh1[i], kvl1[i], inp[41].h, inp[41].l, &inp[45].xh[i], &inp[45].xl[i]);  
+        Mult(kvh2[i], kvl2[i], inp[42].h, inp[42].l, &inp[46].xh[i], &inp[46].xl[i]);
+        Mult(kvh3[i], kvl3[i], inp[43].h, inp[43].l, &inp[47].xh[i], &inp[47].xl[i]);  
+        Mult(kvh4[i], kvl4[i], inp[43].h, inp[43].l, &inp[48].xh[i], &inp[48].xl[i]);
+        Mult(kvh5[i], kvl5[i], inp[44].h, inp[44].l, &inp[49].xh[i], &inp[49].xl[i]);  
+    Summation2(inp[46].xh[i], inp[46].xl[i], -inp[45].xh[i], -inp[45].xl[i], &inp[50].xh[i], &inp[50].xl[i]);   
+    Summation2(inp[47].xh[i], inp[47].xl[i], -inp[48].xh[i], -inp[48].xl[i], &inp[51].xh[i], &inp[51].xl[i]);   
+    Summation2(inp[50].xh[i], inp[50].xl[i],  inp[51].xh[i],  inp[51].xl[i], &inp[52].xh[i], &inp[52].xl[i]);   
+    Summation2(inp[52].xh[i], inp[52].xl[i],  inp[49].xh[i],  inp[49].xl[i], &inp[52].x_h[i], &inp[52].x_l[i]);       
+      Summation2(v[i], vl[i], inp[52].x_h[i],  inp[52].x_l[i],  &inp[53].xh[i], &inp[53].xl[i]);   
+
+  //  r_temp5[i]= r[i] - k_r1[i]*c[4]*dt + k_r2[i]*dt*c[5] + k_r3[i]*dt*c[6] - k_r4[i]*dt*c[6] + k_r5[i]*dt*c[7];    
+        Mult(krh1[i], krl1[i], inp[41].h, inp[41].l, &inp[54].xh[i], &inp[54].xl[i]);  
+        Mult(krh2[i], krl2[i], inp[42].h, inp[42].l, &inp[55].xh[i], &inp[55].xl[i]);
+        Mult(krh3[i], krl3[i], inp[43].h, inp[43].l, &inp[56].xh[i], &inp[56].xl[i]);  
+        Mult(krh4[i], krl4[i], inp[43].h, inp[43].l, &inp[57].xh[i], &inp[57].xl[i]);
+        Mult(krh5[i], krl5[i], inp[44].h, inp[44].l, &inp[58].xh[i], &inp[58].xl[i]);  
+    Summation2(inp[55].xh[i], inp[55].xl[i], -inp[54].xh[i], -inp[54].xl[i], &inp[59].xh[i], &inp[59].xl[i]);   
+    Summation2(inp[56].xh[i], inp[56].xl[i], -inp[57].xh[i], -inp[57].xl[i], &inp[60].xh[i], &inp[60].xl[i]);  
+    Summation2(inp[59].xh[i], inp[59].xl[i],  inp[60].xh[i],  inp[60].xl[i], &inp[61].xh[i], &inp[61].xl[i]);        
+    Summation2(inp[61].xh[i], inp[61].xl[i],  inp[58].xh[i],  inp[58].xl[i], &inp[61].x_h[i], &inp[61].x_l[i]);   
+      Summation2(r[i], rl[i], inp[61].x_h[i],  inp[61].x_l[i], &inp[62].xh[i], &inp[62].xl[i]);         }
+
+    // printf( "%.20le \n", inp[41].h);
+    // exit(1); 
+
+        
+     // 6TH SLOPE
+        f(inp[62].xh, inp[62].xl, inp[53].xh, inp[53].xl, dth, dtl, krh6, krl6, kvh6, kvl6);  
+        for(int i=0; i<3; i++)                                                               {
+    //  kv[i] = (7*(k_v1[i]+k_v6[i]) + 32*(k_v3[i]+k_v5[i]) + 12*k_v4[i])/90.0;
+        Summation2(kvh1[i], kvl1[i], kvh6[i], kvl6[i], &inp[63].xh[i], &inp[63].xl[i]);
+        Summation2(kvh3[i], kvl3[i], kvh5[i], kvl5[i], &inp[64].xh[i], &inp[64].xl[i]);
+         Mult(7.0, 0.0, inp[63].xh[i], inp[63].xl[i], &inp[65].xh[i], &inp[65].xl[i]);  
+        Mult(32.0, 0.0, inp[64].xh[i], inp[64].xl[i], &inp[66].xh[i], &inp[66].xl[i]);          
+        Mult(kvh4[i], kvl4[i], 12.0, 0.0, &inp[67].xh[i], &inp[67].xl[i]);  
+        Summation2(inp[65].xh[i], inp[65].xl[i],  inp[66].xh[i],  inp[66].xl[i], &inp[68].xh[i], &inp[68].xl[i]); 
+        Summation2(inp[67].xh[i], inp[67].xl[i],  inp[68].xh[i],  inp[68].xl[i], &inp[69].xh[i], &inp[69].xl[i]); 
+        Division(inp[69].xh[i], inp[69].xl[i], 90.0, 0.0, &inp[70].xh[i], &inp[70].xl[i]);   
+
+    //  kr[i] = (7*(k_r1[i]+k_r6[i]) + 32*(k_r3[i]+k_r5[i]) + 12*k_r4[i])/90.0;
+        Summation2(krh1[i], krl1[i], krh6[i], krl6[i], &inp[71].xh[i], &inp[71].xl[i]);
+        Summation2(krh3[i], krl3[i], krh5[i], krl5[i], &inp[72].xh[i], &inp[72].xl[i]);
+         Mult(7.0, 0.0, inp[71].xh[i], inp[71].xl[i], &inp[73].xh[i], &inp[73].xl[i]);  
+        Mult(32.0, 0.0, inp[72].xh[i], inp[72].xl[i], &inp[74].xh[i], &inp[74].xl[i]);          
+        Mult(krh4[i], krl4[i], 12.0, 0.0, &inp[75].xh[i], &inp[75].xl[i]);  
+        Summation2(inp[73].xh[i], inp[73].xl[i],  inp[74].xh[i],  inp[74].xl[i], &inp[76].xh[i], &inp[76].xl[i]); 
+        Summation2(inp[75].xh[i], inp[75].xl[i],  inp[76].xh[i],  inp[76].xl[i], &inp[77].xh[i], &inp[77].xl[i]); 
+        Division(inp[77].xh[i], inp[77].xl[i], 90.0, 0.0, &inp[78].xh[i], &inp[78].xl[i]);    
+     
+   //  v[i] += kv[i]*dt;  
+        Mult(dth, dtl, inp[70].xh[i], inp[70].xl[i], &inp[79].xh[i], &inp[79].xl[i]);    
+        Summation2( v[i], vl[i], inp[79].xh[i], inp[79].xl[i], &v[i],  &vl[i]); 
+   //   r[i] += kr[i]*dt;  
+        Mult(dth, dtl, inp[78].xh[i], inp[78].xl[i], &inp[80].xh[i], &inp[80].xl[i]);    
+        Summation2( r[i], rl[i], inp[80].xh[i], inp[80].xl[i], &r[i],  &rl[i]);               } }
+
+    int main(int argc, char* argv[]) {
+      double t, dt, T, EKP[2], ANGM[2], a[2], e[2]; 
+
+      //  r[3]={Xh,Yh,Zh} rl[3]={Xl,Yl,Zl}  V[3]={Vxh,Vyh,Vzh} V[3]={Vxl,Vyl,Vzl} 
+      // DATA: NASA HORIZON https://ssd.jpl.nasa.gov/horizons/app.html#/
+      // JUPITER INITIAL VECTORS 2018-Jun-05
+
+       double  r[]= {-3.460167504309613E+00, -4.149454064629457E+00, 9.465721330038770E-02}; 
+       double  v[]= {5.709741990408655E-03, -4.481465873394258E-03, -1.091471606521913E-04};
+       double rl[]= {-0.0000000000000000486257802e+00, -0.0000000000000001269077053e+00, -0.0000000000000004757454799e-2}; 
+       double vl[]= {-0.0000000000000002100430652e-3,   0.0000000000000004062370784e-3,   0.0000000000000000152006560e-4};
+    
+    //  energies(r, rl, v, vl, EKP, ANGM);
+    //  semimajor_eccentricity(r, rl, v, vl, a, e);  
+    //  printf("%.20le %.20le %.20le %.20le %.20le %.20le\n", a[0] , a[1], e[0], e[1], energy[0], energy[1]);
+
+    T=  2*M_PI*1000;
+    dt= 1e-2;
+    double dtl=-2.08166817e-19;
+      // error measure with long double 
+      long double  A=  5.20273584355200957629L;       // semi-major axis lenght
+      long double EC=  4.88056797545033895064e-02L;   // eccentricity 
+      long double  E= -2.84652874731022392836e-05L;   // mechanical energy of system
+      long double  H=  3.92090843714996407606e-02L;   // angular momentum of system
+    // to store the execution time of code
+      double time_spent = 0.0;
+ 
+      clock_t begin = clock();
+        FILE *kk, *pp;
+      //  kk=fopen("RK4jupiter5000_dt0.0001_accurate_pos.txt","w");
+        pp=fopen("RK5_accurate_energy.txt","w");
+        t=0.0 ;   
+        int Count=0.0;
+
+        while ( t <= T )  {    
+        RK5(r, rl, v, vl, dt, dtl);                        
+        energies(r, rl, v, vl, EKP, ANGM);              // energies
+        semimajor_eccentricity(r, rl, v, vl, a, e);     // orbital elements
+        long double energy= (EKP[0]-E+EKP[1])/E;
+        long double angmomentum = (ANGM[0]-H+ANGM[1])/H;
+      //  fprintf(kk,"%d %.20lf %.20lf %.20lf %.20lf %.20lf %.20lf \n", Count, r[0], rl[0], r[1], rl[1], r[2], rl[2]);
+        fprintf(pp,"%.3lf %d %.15Le %.15Le %.15Le %.15Le\n", t, FCOUNT, (a[0]-A+a[1])/A, (e[0]-EC+e[1])/EC, energy, angmomentum);                                                                  
+        t +=dt;
+        Count++;
+        }
+         clock_t end = clock();
+        fclose(kk);
+        fclose(pp);
+      // calculate elapsed time by finding difference (end - begin) and
+      // dividing the difference by CLOCKS_PER_SEC to convert to seconds
+    time_spent += (double)(end - begin) / CLOCKS_PER_SEC;
+ 
+    printf("The elapsed time is %f seconds", time_spent);
+        return (0);  }
+        
+    //  The elapsed time is 7.741391 -> more than 3,04 times 
+
+
+
+
+
+
+    
